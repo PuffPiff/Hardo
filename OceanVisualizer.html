@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Visualizer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: #fff;
+        }
+
+        #drop-area {
+            border: 2px dashed #fff;
+            padding: 20px;
+            margin: 50px auto;
+            width: 80%;
+            cursor: pointer;
+        }
+
+        canvas {
+            display: block;
+            margin: 20px auto;
+            border: 1px solid #fff;
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Music Visualizer</h1>
+    <div id="drop-area">Drop an MP3 or WAV file here</div>
+    <canvas id="visualizer"></canvas>
+
+    <script>const dropArea = document.getElementById('drop-area');
+        const canvas = document.getElementById('visualizer');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth * 0.8;
+        canvas.height = 400;
+
+        dropArea.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            dropArea.style.borderColor = '#00ff00';
+        });
+
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.style.borderColor = '#fff';
+        });
+
+        dropArea.addEventListener('drop', (event) => {
+            event.preventDefault();
+            dropArea.style.borderColor = '#fff';
+            const file = event.dataTransfer.files[0];
+
+            if (file && (file.type === 'audio/mp3' || file.type === 'audio/wav')) {
+                const audio = new Audio();
+                const reader = new FileReader();
+
+                reader.onload = function (e) {
+                    audio.src = e.target.result;
+                    audio.play();
+                    visualizeAudio(audio);
+                };
+
+                reader.readAsDataURL(file);
+            } else {
+                alert('Please drop a valid MP3 or WAV file.');
+            }
+        });
+
+        // Stars and clouds
+        const stars = Array.from({ length: 100 }, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height * 0.8,
+            brightness: Math.random() * 255
+        }));
+
+        const clouds = Array.from({ length: 15 }, (_, i) => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * 150 + 50,
+            size: i % 2 === 0 ? 40 : 25,
+            speed: i % 2 === 0 ? 0.15 : 0.4
+        }));
+
+        function drawCloud(x, y, size) {
+            ctx.fillStyle = 'rgba(200, 200, 200, 0.8)';
+            ctx.beginPath();
+            ctx.arc(x, y, size, Math.PI * 0.5, Math.PI * 1.5);
+            ctx.arc(x + size / 2, y - size / 2, size / 1.5, Math.PI * 1, Math.PI * 2);
+            ctx.arc(x + size, y, size, Math.PI * 1.5, Math.PI * 0.5);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Rain effect
+        const raindrops = Array.from({ length: 80 }, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            speed: Math.random() * 2 + 1,
+            length: Math.random() * 15 + 10,
+            color: `rgba(50, ${Math.random() * 150 + 100}, 255, ${Math.random() * 0.8 + 0.2})`
+        }));
+
+        function drawRain() {
+            raindrops.forEach(drop => {
+                ctx.strokeStyle = drop.color;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(drop.x, drop.y);
+                ctx.lineTo(drop.x + 3, drop.y + drop.length);
+                ctx.stroke();
+
+                drop.x += 1.2;
+                drop.y += drop.speed;
+
+                if (drop.y > canvas.height) {
+                    drop.y = 0;
+                    drop.x = Math.random() * canvas.width;
+                }
+            });
+        }
+
+        function visualizeAudio(audio) {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const analyser = audioContext.createAnalyser();
+            const source = audioContext.createMediaElementSource(audio);
+
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+            analyser.fftSize = 256;
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function draw() {
+                requestAnimationFrame(draw);
+                analyser.getByteFrequencyData(dataArray);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Moon Drawing - Clean Crescent Shape
+ctx.fillStyle = 'yellow';
+ctx.beginPath();
+ctx.arc(100, 80, 50, 0, Math.PI * 2); // Full circle
+ctx.fill();
+
+// Black circle to carve out the crescent shape
+ctx.fillStyle = 'black';
+ctx.beginPath();
+ctx.arc(120, 80, 50, 0, Math.PI * 2); // Adjust position to overlap properly
+ctx.fill();
+
+
+                // Stars
+                stars.forEach(star => {
+                    star.x += 0.1;
+                    if (star.x > canvas.width) star.x = 0;
+                    ctx.fillStyle = `rgb(${star.brightness}, ${star.brightness}, ${star.brightness})`;
+                    ctx.fillRect(star.x, star.y, 3, 3);
+                });
+
+                // Clouds
+                clouds.forEach(cloud => {
+                    drawCloud(cloud.x, cloud.y, cloud.size);
+                    cloud.x += cloud.speed;
+                    if (cloud.x > canvas.width) cloud.x = -cloud.size;
+                });
+
+                // Rain
+                drawRain();
+
+                // Gradient background
+                const gradientHeight = 55;
+                const backgroundGradient = ctx.createLinearGradient(0, canvas.height - gradientHeight, 0, canvas.height);
+                backgroundGradient.addColorStop(0, 'rgba(50, 150, 255, 0.9)');
+                backgroundGradient.addColorStop(1, 'rgba(30, 80, 200, 0.7)');
+                ctx.fillStyle = backgroundGradient;
+                ctx.fillRect(0, canvas.height - gradientHeight, canvas.width, gradientHeight);
+
+                // Visualizer bars with three layers
+                const barWidth = (canvas.width / bufferLength) * 2.2;
+                let x = 0;
+
+                for (let i = 0; i < bufferLength; i++) {
+                    const timeFactor = Date.now() * 0.0007;
+
+                    const barHeight = Math.sin(i * 0.1 + timeFactor) * dataArray[i] / 1.8;
+                    ctx.fillStyle = `rgba(50, 100, 200, 0.8)`;
+                    ctx.fillRect(x, canvas.height - barHeight - 50, barWidth, barHeight);
+
+                    const midBarHeight = Math.cos(i * 0.08 + timeFactor) * dataArray[i] / 2;
+                    ctx.fillStyle = `rgba(70, 130, 220, 0.7)`;
+                    ctx.fillRect(x, canvas.height - midBarHeight - 25, barWidth, midBarHeight);
+
+                    ctx.fillStyle = `rgba(50, 100, 255, 0.8)`;
+                    ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight * 1.2);
+
+                    x += barWidth - 1;
+                }
+            }
+
+            draw();
+        }</script>
+
+</body>
+</html>
