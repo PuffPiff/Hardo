@@ -35,12 +35,43 @@
     <h1>Music Visualizer</h1>
     <div id="drop-area">Drop an MP3 or WAV file here</div>
     <canvas id="visualizer"></canvas>
+    <input type="file" id="file-input" accept="audio/mpeg, audio/wav" style="display: none;">
 
     <script>const dropArea = document.getElementById('drop-area');
         const canvas = document.getElementById('visualizer');
         const ctx = canvas.getContext('2d');
         canvas.width = window.innerWidth * 0.8;
         canvas.height = 400;
+
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'audio/mpeg, audio/wav';
+        fileInput.style.display = 'none';
+        document.body.appendChild(fileInput);
+
+        dropArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+
+            if (file && (file.type === 'audio/mpeg' || file.type === 'audio/wav')) {
+                const audio = new Audio();
+                const reader = new FileReader();
+
+                reader.onload = function (e) {
+                    audio.src = e.target.result;
+                    audio.play();
+                    visualizeAudio(audio);
+                };
+
+                reader.readAsDataURL(file);
+            } else {
+                alert('Please select a valid MP3 or WAV file.');
+            }
+        });
+
 
         dropArea.addEventListener('dragover', (event) => {
             event.preventDefault();
@@ -56,7 +87,7 @@
             dropArea.style.borderColor = '#fff';
             const file = event.dataTransfer.files[0];
 
-            if (file && (file.type === 'audio/mp3' || file.type === 'audio/wav')) {
+            if (file && (file.type === 'audio/mpeg' || file.type === 'audio/wav')) {
                 const audio = new Audio();
                 const reader = new FileReader();
 
@@ -124,6 +155,25 @@
             });
         }
 
+        // Boat properties
+        let boatX = -100;
+
+        function drawBoat() {
+            ctx.fillStyle = 'brown';
+            ctx.fillRect(boatX, canvas.height - 60, 60, 20);  // Corrected position of the boat body
+
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.moveTo(boatX + 30, canvas.height - 80);  // Top of the sail
+            ctx.lineTo(boatX + 50, canvas.height - 60);  // Bottom-right of the sail
+            ctx.lineTo(boatX + 10, canvas.height - 60);  // Bottom-left of the sail
+            ctx.closePath();
+            ctx.fill();
+
+            boatX += 0.5;
+            if (boatX > canvas.width) boatX = -100;
+        }
+
         function visualizeAudio(audio) {
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const analyser = audioContext.createAnalyser();
@@ -142,17 +192,15 @@
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                 // Moon Drawing - Clean Crescent Shape
-ctx.fillStyle = 'yellow';
-ctx.beginPath();
-ctx.arc(100, 80, 50, 0, Math.PI * 2); // Full circle
-ctx.fill();
+                ctx.fillStyle = 'yellow';
+                ctx.beginPath();
+                ctx.arc(100, 80, 50, 0, Math.PI * 2);
+                ctx.fill();
 
-// Black circle to carve out the crescent shape
-ctx.fillStyle = 'black';
-ctx.beginPath();
-ctx.arc(120, 80, 50, 0, Math.PI * 2); // Adjust position to overlap properly
-ctx.fill();
-
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(120, 80, 50, 0, Math.PI * 2);
+                ctx.fill();
 
                 // Stars
                 stars.forEach(star => {
@@ -172,6 +220,9 @@ ctx.fill();
                 // Rain
                 drawRain();
 
+                // Boat
+                drawBoat();
+
                 // Gradient background
                 const gradientHeight = 55;
                 const backgroundGradient = ctx.createLinearGradient(0, canvas.height - gradientHeight, 0, canvas.height);
@@ -185,15 +236,12 @@ ctx.fill();
                 let x = 0;
 
                 for (let i = 0; i < bufferLength; i++) {
-                    const timeFactor = Date.now() * 0.0007;
-
-                    const barHeight = Math.sin(i * 0.1 + timeFactor) * dataArray[i] / 1.8;
+                    const barHeight = dataArray[i] / 1.8;
                     ctx.fillStyle = `rgba(50, 100, 200, 0.8)`;
                     ctx.fillRect(x, canvas.height - barHeight - 50, barWidth, barHeight);
 
-                    const midBarHeight = Math.cos(i * 0.08 + timeFactor) * dataArray[i] / 2;
                     ctx.fillStyle = `rgba(70, 130, 220, 0.7)`;
-                    ctx.fillRect(x, canvas.height - midBarHeight - 25, barWidth, midBarHeight);
+                    ctx.fillRect(x, canvas.height - barHeight - 25, barWidth, barHeight);
 
                     ctx.fillStyle = `rgba(50, 100, 255, 0.8)`;
                     ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight * 1.2);
@@ -204,6 +252,5 @@ ctx.fill();
 
             draw();
         }</script>
-
 </body>
 </html>
